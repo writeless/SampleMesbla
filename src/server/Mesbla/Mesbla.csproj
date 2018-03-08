@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Writeless\Writeless.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Ecommerce\Sales\" />
+  </ItemGroup>
+
+</Project>
