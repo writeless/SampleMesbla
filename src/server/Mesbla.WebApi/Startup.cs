@@ -1,25 +1,21 @@
 ﻿using AutoMapper;
+using FluentValidation;
 using MediatR;
-using FluentValidation.AspNetCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Threading.Tasks;
+using Mesbla.Core.Data;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyModel;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Reflection;
 using Writeless.Exceptions;
 using Writeless.Extensions.AutoMapper;
-using Microsoft.EntityFrameworkCore.Infrastructure;
+using Writeless.Extensions.Swagger;
 using Writeless.Pipelines;
-using FluentValidation;
-using Mesbla.Core.Data;
 
 //TODO: ver se tem algo interessante a implementar
 //https://github.com/gothinkster/aspnetcore-realworld-example-app/blob/2fb44f214b874f6007b6bc7b8da860de9385170b/src/Conduit/Startup.cs
@@ -28,6 +24,9 @@ namespace Mesbla.WebApi
 {
     public class Startup
     {
+        public readonly string ApiTitle = "Mesbla";
+        public readonly string[] ApiVersions = new string[] { "v1" };
+
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -58,6 +57,9 @@ namespace Mesbla.WebApi
             services.AddMediatR();
             services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationPipeline<,>));
 
+            //Swagger
+            services.AddSwaggerGen(ApiTitle, ApiVersions);
+
             //DbContext 
             var assemblyName = GetType().Assembly.GetName().Name;
             Action<SqlServerDbContextOptionsBuilder> dbOptionsBuilder = options => {
@@ -76,20 +78,31 @@ namespace Mesbla.WebApi
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env, CommandContext commandContext)
+        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory, CommandContext commandContext)
         {
             if (env.IsDevelopment())
             {
+                loggerFactory.AddConsole(Configuration.GetSection("Logging"));
+                loggerFactory.AddDebug();
+                loggerFactory.AddConsole(LogLevel.Debug);
+
                 app.UseExceptionHandler(AppExceptionHandler.InDev);
 
                 commandContext.Database.EnsureCreated();
+
+                app.UseCors(builder => builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
             }
             else
             {
                 app.UseExceptionHandler(AppExceptionHandler.InProd);
+
+                //TODO: app.UseCors(builder => builder.WithOrigins("http://localhost:4200").AllowAnyMethod().AllowAnyHeader());
             }
 
             app.UseMvc();
+
+            //Swagger
+            app.UseSwaggerUI(ApiTitle, ApiVersions);
         }
     }
 }
